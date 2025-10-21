@@ -1,18 +1,51 @@
 // Content script to detect 42 event registrations and show inline prompt
 
 (function() {
-  const TRY_TEXTS = ['register', 'subscribe', 'anmelden', 'teilnehmen', "s'inscrire", 'inscrire'];
+  const TRY_TEXTS = [
+    'register', 'subscribe', 'join', 'participate', 'sign up', 'apply',
+    'anmelden', 'teilnehmen', "s'inscrire", 'inscrire'
+  ];
 
   function extractEventIdFromUrl() {
     const m = location.pathname.match(/\/events\/(\d+)/);
     return m ? m[1] : null;
   }
 
+  function extractEventIdFromElement(el) {
+    // Look at element href
+    if (el && typeof el.getAttribute === 'function') {
+      const href = el.getAttribute('href');
+      if (href) {
+        const m = href.match(/\/events\/(\d+)/);
+        if (m) return m[1];
+      }
+    }
+    // Look at closest anchor
+    const a = el?.closest && el.closest('a[href*="/events/"]');
+    if (a && a.href) {
+      const m = a.href.match(/\/events\/(\d+)/);
+      if (m) return m[1];
+    }
+    // Look at enclosing form action
+    const form = el?.closest && el.closest('form[action]');
+    if (form && form.action) {
+      const m = form.action.match(/\/events\/(\d+)/);
+      if (m) return m[1];
+    }
+    // Fallback: scan any event link on page
+    const any = document.querySelector('a[href*="/events/"]');
+    if (any && any.href) {
+      const m = any.href.match(/\/events\/(\d+)/);
+      if (m) return m[1];
+    }
+    return null;
+  }
+
   function findRegisterCandidates() {
     const elements = Array.from(document.querySelectorAll('button, a, input[type="submit"]'));
     return elements.filter(el => {
       const text = (el.innerText || el.value || '').trim().toLowerCase();
-      return TRY_TEXTS.some(t => text.includes(t));
+      return TRY_TEXTS.some(t => text && text.includes(t));
     });
   }
 
@@ -86,14 +119,14 @@
   function attach() {
     const candidates = findRegisterCandidates();
     if (candidates.length === 0) return;
-    const eventId = extractEventIdFromUrl();
-
     for (const el of candidates) {
-      el.addEventListener('click', () => {
-        // Inform background we saw a registration click (for robustness/polling)
+      el.addEventListener('click', (evt) => {
+        const fromUrl = extractEventIdFromUrl();
+        const fromEl = extractEventIdFromElement(evt.target);
+        const eventId = fromEl || fromUrl;
         if (eventId) {
           chrome.runtime.sendMessage({ type: 'content_register_click', eventId });
-          // Show inline prompt immediately
+          // Show inline prompt immediately (may be replaced by prompt tab if page navigates)
           createOverlayPrompt(eventId);
         }
       }, { capture: true });
