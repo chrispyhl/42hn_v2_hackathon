@@ -1,6 +1,8 @@
 // Content script to detect 42 event registrations and show inline prompt
 
 (function() {
+  // Early smoke log
+  try { console.debug('[42 Calendar Sync] content script loaded on', location.href); } catch {}
   const TRY_TEXTS = [
     'register', 'subscribe', 'join', 'participate', 'sign up', 'apply',
     'anmelden', 'teilnehmen', "s'inscrire", 'inscrire'
@@ -128,9 +130,8 @@
         const fromUrl = extractEventIdFromUrl();
         const fromEl = extractEventIdFromElement(evt.target);
         const eventId = fromEl || fromUrl;
-        if (eventId) {
+        if (eventId && chrome?.runtime?.id) {
           chrome.runtime.sendMessage({ type: 'content_register_click', eventId });
-          // Show inline prompt immediately (may be replaced by prompt tab if page navigates)
           createOverlayPrompt(eventId);
         }
       }, { capture: true });
@@ -140,6 +141,6 @@
   // Observe DOM for late-loaded buttons as well
   const obs = new MutationObserver(() => attach());
   obs.observe(document.documentElement, { childList: true, subtree: true });
-  // Initial attach
-  attach();
+  // Initial attach (delay for SPAs)
+  setTimeout(attach, 500);
 })();
