@@ -73,4 +73,22 @@ addEventListener('DOMContentLoaded', () => {
   document.getElementById('saveG').addEventListener('click', saveG);
   document.getElementById('connect42').addEventListener('click', connect42);
   document.getElementById('connectG').addEventListener('click', connectG);
+
+  const scanBtn = document.getElementById('scanNow');
+  const msgScan = document.getElementById('msgScan');
+  if (scanBtn) {
+    scanBtn.addEventListener('click', () => {
+      msgScan.textContent = 'Scanning…';
+      msgScan.className = 'note';
+      chrome.runtime.sendMessage({ type: 'debug_force_poll' }, (res) => {
+        if (res?.ok) {
+          msgScan.textContent = 'Scan requested. If new future registrations are found, a confirmation tab will open.';
+          msgScan.className = 'note ok';
+        } else {
+          msgScan.textContent = `Scan failed: ${res?.error || 'unknown error'}`;
+          msgScan.className = 'note err';
+        }
+      });
+    });
+  }
 });

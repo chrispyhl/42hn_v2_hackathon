@@ -332,6 +332,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       sendResponse({ ok: true });
       return;
     }
+    if (msg?.type === 'debug_force_poll') {
+      await pollForNewEvents();
+      sendResponse({ ok: true });
+      return;
+    }
     if (msg?.type === 'options_connect_42') {
       await authorize42Interactive();
       sendResponse({ ok: true });
