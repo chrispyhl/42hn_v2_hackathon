@@ -12,6 +12,7 @@ const STORAGE_KEYS = {
   tokGoogleRefresh: 'tok_google_refresh_token',
   tokGoogleExpiry: 'tok_google_expiry',
   knownEventIds: 'known_event_ids',
+  syncedEventIds: 'synced_event_ids',
   pendingSync: 'pending_sync_event'
 };
 // Detect popup/child windows navigating to event pages (e.g., modal windows or separate popups)
@@ -302,7 +303,7 @@ async function handleNewRegistration(eventId) {
       return;
     }
     await setStored({ [dedupeKey]: now });
-    await setStored({ [STORAGE_KEYS.pendingSync]: { id: event42.id, name: event42.name, begin_at: event42.begin_at } });
+    await setStored({ [STORAGE_KEYS.pendingSync]: { type: 'add', id: event42.id, name: event42.name, begin_at: event42.begin_at } });
     await openPromptWindow();
   } catch (e) {
     console.warn('Failed to fetch event for prompt:', e.message);
@@ -315,22 +316,38 @@ async function pollForNewEvents() {
     const events = await fortyTwoFetch('/me/events');
     const now = new Date();
     const futureEvents = events.filter(e => new Date(e.begin_at) > now);
-    const { [STORAGE_KEYS.knownEventIds]: known = [] } = await getStored([STORAGE_KEYS.knownEventIds]);
-    const knownSet = new Set(known);
+    const currentIds = new Set(futureEvents.map(e => e.id));
 
-    const newOnes = [];
-    for (const e of futureEvents) {
-      if (!knownSet.has(e.id)) newOnes.push(e);
+    const store = await getStored([STORAGE_KEYS.knownEventIds, STORAGE_KEYS.syncedEventIds]);
+    const known = Array.isArray(store[STORAGE_KEYS.knownEventIds]) ? store[STORAGE_KEYS.knownEventIds] : [];
+    const synced = Array.isArray(store[STORAGE_KEYS.syncedEventIds]) ? store[STORAGE_KEYS.syncedEventIds] : [];
+    const knownSet = new Set(known);
+    const syncedSet = new Set(synced);
+
+    // additions
+    const added = futureEvents.filter(e => !knownSet.has(e.id));
+    // removals (only consider those previously known)
+    const removedIds = known.filter(id => !currentIds.has(id));
+
+    // Update known set now
+    const updatedKnown = Array.from(currentIds);
+    await setStored({ [STORAGE_KEYS.knownEventIds]: updatedKnown });
+
+    // Prompt for first addition
+    if (added.length > 0) {
+      const e = added[0];
+      await setStored({ [STORAGE_KEYS.pendingSync]: { type: 'add', id: e.id, name: e.name, begin_at: e.begin_at } });
+      await openPromptWindow();
+      return; // one prompt at a time
     }
 
-    if (newOnes.length > 0) {
-      // Update known set immediately to avoid repeated prompts
-      const updated = Array.from(new Set([...known, ...futureEvents.map(e => e.id)]));
-      await setStored({ [STORAGE_KEYS.knownEventIds]: updated });
-      // Prompt for the first new event
-      await setStored({ [STORAGE_KEYS.pendingSync]: { id: newOnes[0].id, name: newOnes[0].name, begin_at: newOnes[0].begin_at } });
-      const url = chrome.runtime.getURL('prompt.html');
-      await chrome.tabs.create({ url });
+    // Prompt for first removal if we had previously synced it or it exists in Google
+    for (const rid of removedIds) {
+      if (syncedSet.has(rid) || await eventExistsInGoogle(rid)) {
+        await setStored({ [STORAGE_KEYS.pendingSync]: { type: 'remove', id: rid } });
+        await openPromptWindow();
+        return;
+      }
     }
   } catch (e) {
     // Silently ignore transient failures
@@ -345,11 +362,11 @@ chrome.runtime.onInstalled.addListener(async () => {
   // run once after install
   pollForNewEvents();
   // then every 15 minutes
-  chrome.alarms.create('poll42', { periodInMinutes: 15 });
+  chrome.alarms.create('poll42', { periodInMinutes: 1 });
 });
 
 chrome.runtime.onStartup.addListener(() => {
-  chrome.alarms.create('poll42', { periodInMinutes: 15 });
+  chrome.alarms.create('poll42', { periodInMinutes: 1 });
 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
@@ -393,6 +410,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       }
       const gEvent = toGoogleEvent(event42);
       await insertGoogleEvent(gEvent);
+      // Track synced events
+      const store = await getStored([STORAGE_KEYS.syncedEventIds]);
+      const synced = Array.isArray(store[STORAGE_KEYS.syncedEventIds]) ? store[STORAGE_KEYS.syncedEventIds] : [];
+      if (!synced.includes(event42.id)) synced.push(event42.id);
+      await setStored({ [STORAGE_KEYS.syncedEventIds]: synced });
       sendResponse({ ok: true, created: true });
       return;
     }
@@ -408,6 +430,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             } catch {}
           }
         }
+        // Update synced events
+        const store = await getStored([STORAGE_KEYS.syncedEventIds]);
+        const synced = Array.isArray(store[STORAGE_KEYS.syncedEventIds]) ? store[STORAGE_KEYS.syncedEventIds] : [];
+        const filtered = synced.filter(id => id !== msg.eventId);
+        await setStored({ [STORAGE_KEYS.syncedEventIds]: filtered });
         sendResponse({ ok: true, deleted: true });
       } catch (e) {
         sendResponse({ ok: false, error: e?.message || String(e) });

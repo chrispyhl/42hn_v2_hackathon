@@ -10,18 +10,33 @@ async function main() {
     info.textContent = 'No pending event to sync.';
     return;
   }
-  info.textContent = `${pending.name} – ${new Date(pending.begin_at).toLocaleString()}`;
+  if (pending.type === 'add') {
+    info.textContent = `${pending.name} – ${new Date(pending.begin_at).toLocaleString()}`;
+  } else if (pending.type === 'remove') {
+    info.textContent = `You unsubscribed from an event. Remove it from Google Calendar?`;
+    document.getElementById('add').textContent = 'Remove from Calendar';
+  }
 
   document.getElementById('add').addEventListener('click', () => {
-    chrome.runtime.sendMessage({ type: 'sync_event', eventId: pending.id }, (res) => {
-      if (res?.ok && res?.created) {
-        info.textContent = 'Event added to Google Calendar.';
-      } else if (res?.ok && res?.skipped) {
-        info.textContent = 'Event already exists in Google Calendar.';
-      } else {
-        info.textContent = `Failed: ${res?.error || 'unknown error'}`;
-      }
-    });
+    if (pending.type === 'add') {
+      chrome.runtime.sendMessage({ type: 'sync_event', eventId: pending.id }, (res) => {
+        if (res?.ok && res?.created) {
+          info.textContent = 'Event added to Google Calendar.';
+        } else if (res?.ok && res?.skipped) {
+          info.textContent = 'Event already exists in Google Calendar.';
+        } else {
+          info.textContent = `Failed: ${res?.error || 'unknown error'}`;
+        }
+      });
+    } else if (pending.type === 'remove') {
+      chrome.runtime.sendMessage({ type: 'delete_event', eventId: pending.id }, (res) => {
+        if (res?.ok && res?.deleted) {
+          info.textContent = 'Event removed from Google Calendar.';
+        } else {
+          info.textContent = `Failed: ${res?.error || 'unknown error'}`;
+        }
+      });
+    }
   });
 
   document.getElementById('cancel').addEventListener('click', () => {
