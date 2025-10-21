@@ -231,8 +231,13 @@ function toGoogleEvent(event42) {
 
 async function eventExistsInGoogle(eventId42) {
   const query = encodeURIComponent(`https://projects.intra.42.fr/events/${eventId42}`);
-  const data = await googleApi(`/calendars/primary/events?q=${query}&maxResults=1&showDeleted=false`);
-  return Array.isArray(data.items) && data.items.length > 0;
+  try {
+    const data = await googleApi(`/calendars/primary/events?q=${query}&maxResults=1&showDeleted=false`);
+    return Array.isArray(data.items) && data.items.length > 0;
+  } catch (e) {
+    // If Calendar API search fails, assume not existing to allow user to add
+    return false;
+  }
 }
 
 async function insertGoogleEvent(googleEvent) {
@@ -304,6 +309,10 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 // Message handling from options and content scripts
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   (async () => {
+    if (msg?.type === 'debug_ping') {
+      sendResponse({ ok: true, at: Date.now(), sender });
+      return;
+    }
     if (msg?.type === 'content_register_click' && msg.eventId) {
       await handleNewRegistration(msg.eventId);
       sendResponse({ ok: true });

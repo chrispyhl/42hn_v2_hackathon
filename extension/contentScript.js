@@ -42,10 +42,14 @@
   }
 
   function findRegisterCandidates() {
-    const elements = Array.from(document.querySelectorAll('button, a, input[type="submit"]'));
+    const elements = Array.from(
+      document.querySelectorAll(
+        'button, a, input[type="submit"], [role="button"], .button, .btn, [class*="register"], [class*="subscribe"], [data-action*="register"]'
+      )
+    );
     return elements.filter(el => {
-      const text = (el.innerText || el.value || '').trim().toLowerCase();
-      return TRY_TEXTS.some(t => text && text.includes(t));
+      const text = (el.innerText || el.value || el.getAttribute('aria-label') || '').trim().toLowerCase();
+      return text && TRY_TEXTS.some(t => text.includes(t));
     });
   }
 

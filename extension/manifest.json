@@ -13,6 +13,7 @@
     "https://api.intra.42.fr/*",
     "https://projects.intra.42.fr/*",
     "https://intra.42.fr/*",
+    "https://*.intra.42.fr/*",
     "https://www.googleapis.com/*"
   ],
   "background": {
@@ -27,7 +28,8 @@
     {
       "matches": [
         "https://projects.intra.42.fr/*",
-        "https://intra.42.fr/*"
+        "https://intra.42.fr/*",
+        "https://*.intra.42.fr/*"
       ],
       "js": ["contentScript.js"],
       "run_at": "document_idle"

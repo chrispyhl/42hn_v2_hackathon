@@ -73,5 +73,12 @@
     </div>
 
     <script src="options.js"></script>
+    <script>
+      // simple smoke test to ensure background is reachable
+      chrome.runtime.sendMessage({ type: 'debug_ping' }, (res) => {
+        // no-op; if blocked, user can see console error
+        console.debug('Background ping:', res);
+      });
+    </script>
   </body>
 </html>
