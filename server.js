@@ -201,7 +201,8 @@ app.get('/callback/google', async (req, res) => {
                         url: `https://projects.intra.42.fr/events/${event42.id}`,
                     }
                 };
-            });
+            })
+            .sort((a, b) => new Date(a.start.dateTime) - new Date(b.start.dateTime));
 
         // --- 4. Decision: Sync or Show Confirmation ---
         
@@ -242,25 +243,83 @@ app.get('/callback/google', async (req, res) => {
             
             const eventListHtml = calendarEvents.map(event => {
                 const eventId = event.source.url.split('/').pop(); 
+                const isoStart = event.start.dateTime;
+                const isoEnd = event.end.dateTime;
+                const location = event.location && event.location !== 'N/A' ? event.location : '';
+                const desc = event.description ? event.description.replace(/\n/g, '<br>') : '';
                 return `
-                <li>
-                    ${event.summary} (${event.start.dateTime.split('T')[0]} at ${event.start.dateTime.split('T')[1].substring(0, 5)}h)
-                    <a href="/sync/single?token=${accessToken42}&event_id=${eventId}&google_access_token=${googleAccessToken}"> [Add to Google Calendar] </a>
+                <li class="card">
+                  <div class="card-head">
+                    <div class="card-title">${event.summary}</div>
+                    ${location ? `<div class="card-location">${location}</div>` : ''}
+                  </div>
+                  <div class="card-meta">
+                    <span class="date" data-iso="${isoStart}">${isoStart}</span>
+                    <span> → </span>
+                    <span class="date" data-iso="${isoEnd}">${isoEnd}</span>
+                  </div>
+                  ${desc ? `<div class="card-desc">${desc}</div>` : ''}
+                  <div class="card-actions">
+                    <a class="btn" href="/sync/single?token=${accessToken42}&event_id=${eventId}&google_access_token=${googleAccessToken}">Add to Google Calendar</a>
+                    <a class="btn-secondary" target="_blank" rel="noreferrer" href="${event.source.url}">Open in 42 Intra</a>
+                  </div>
                 </li>`
             }).join('');
             
-            res.send(`
-                <h1>Confirm Events to Sync</h1>
-                <p>You are about to sync ${calendarEvents.length} future 42 events:</p>
-                <ul>${eventListHtml}</ul>
-                <hr>
-                <p>To fully sync all these events at once, click here: 
-                <a href="/login/42?auto_sync=true">Sync all events now</a></p>
-                
-                <h3>Future: Automatic Sync</h3>
-                <p>To enable permanent automatic sync (the "Haken"), you would start the process via this link:
-                <a href="/login/42?auto_sync=true">http://localhost:3000/login/42?auto_sync=true</a></p>
-            `);
+            res.send(`<!doctype html>
+              <html>
+              <head>
+                <meta charset="utf-8" />
+                <meta name="viewport" content="width=device-width, initial-scale=1" />
+                <title>42 → Google Calendar – Confirm Sync</title>
+                <style>
+                  :root { --bg:#0b1020; --card:#121a35; --muted:#9aa3b2; --text:#e6ebf5; --brand:#1a73e8; --brand-2:#27496d; --ok:#16a34a; }
+                  * { box-sizing: border-box; }
+                  body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans"; background: var(--bg); color: var(--text); }
+                  .wrap { max-width: 960px; margin: 32px auto; padding: 0 20px; }
+                  .header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom: 18px; }
+                  h1 { font-size: 22px; margin: 0; }
+                  p.lead { color: var(--muted); margin: 6px 0 0 0; }
+                  .actions { display:flex; gap:10px; flex-wrap: wrap; }
+                  .btn, .btn-secondary { display:inline-block; padding:8px 12px; border-radius:8px; text-decoration:none; font-weight:600; }
+                  .btn { background: var(--brand); color:white; }
+                  .btn-secondary { background: transparent; color: var(--text); border:1px solid #2a345a; }
+                  ul.cards { list-style:none; padding:0; margin: 18px 0 0 0; display:grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap:12px; }
+                  .card { background: var(--card); border:1px solid #1c2547; border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:10px; }
+                  .card-head { display:flex; flex-direction:column; gap:4px; }
+                  .card-title { font-size: 16px; font-weight:700; line-height:1.2; }
+                  .card-location { font-size: 12px; color: var(--muted); }
+                  .card-meta { font-size: 12px; color: var(--muted); }
+                  .card-desc { font-size: 13px; color: #cfd6e6; max-height: 7.5em; overflow: auto; }
+                  .card-actions { display:flex; gap:8px; flex-wrap:wrap; }
+                  .footer { margin-top: 20px; color: var(--muted); font-size: 13px; }
+                </style>
+              </head>
+              <body>
+                <div class="wrap">
+                  <div class="header">
+                    <div>
+                      <h1>Confirm events to sync</h1>
+                      <p class="lead">${calendarEvents.length} future 42 events detected. Add individually or sync all at once.</p>
+                    </div>
+                    <div class="actions">
+                      <a class="btn" href="/login/42?auto_sync=true">Sync all events now</a>
+                    </div>
+                  </div>
+                  <ul class="cards">${eventListHtml}</ul>
+                  <div class="footer">Tip: Times are shown in your local timezone.</div>
+                </div>
+                <script>
+                  // Format ISO times into local readable strings
+                  const opts = { year:'numeric', month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit' };
+                  document.querySelectorAll('.date').forEach(el => {
+                    const iso = el.getAttribute('data-iso');
+                    if (!iso) return;
+                    try { el.textContent = new Date(iso).toLocaleString([], opts); } catch {}
+                  });
+                </script>
+              </body>
+              </html>`);
         }
 
     } catch (error) {

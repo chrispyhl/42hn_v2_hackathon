@@ -56,3 +56,30 @@ You choose: Fully Automatic (all future events at once with duplicate checking) 
 🛡️ Data Integrity
 
 The system uses duplicate checking and solves API issues (like pagination and the missing date filter) to ensure a complete sync.
+
+
+## 🧩 Browser Extension (Automatic Sync & Prompts)
+
+For a seamless experience without manually starting the Node server, you can use the included Chrome extension in `extension/`. It watches for new registrations on 42 Intra, prompts you to add them to Google Calendar, and can periodically check for new future events.
+
+### Install the extension (Chrome MV3)
+
+1. Open Chrome and go to `chrome://extensions/`
+2. Enable Developer Mode (top-right)
+3. Click "Load unpacked" and select the `extension/` folder
+
+### Configure OAuth once
+
+1. Open the extension's Options (click the extension icon > gear or via the card on chrome://extensions)
+2. Paste your credentials:
+   - 42 Client ID (UID) and Secret
+   - Google Client ID and Secret
+3. Copy the shown Redirect URIs and configure them in your 42 and Google OAuth app settings
+4. Click "Connect 42" and then "Connect Google" to authorize
+
+### Use
+
+- When you register for a 42 event, you'll see a prompt asking to add it to your Google Calendar.
+- The background service also periodically checks your future registrations and can prompt you to add newly detected events.
+- All prompts and UI are in English.
+

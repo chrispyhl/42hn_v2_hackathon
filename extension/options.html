@@ -1,0 +1,94 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>42 Calendar Sync – Options</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji'; margin: 20px; }
+      .card { max-width: 720px; padding: 20px; border: 1px solid #e5e7eb; border-radius: 10px; }
+      h1 { font-size: 20px; margin-bottom: 10px; }
+      h2 { font-size: 16px; margin: 18px 0 8px; }
+      label { display: block; font-size: 13px; color: #374151; margin-bottom: 4px; }
+      input { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; }
+      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .actions { margin-top: 16px; display: flex; gap: 12px; }
+      button { padding: 8px 12px; border-radius: 6px; border: 1px solid #d1d5db; cursor: pointer; }
+      button.primary { background: #1a73e8; color: white; border-color: #1a73e8; }
+      .note { font-size: 12px; color: #6b7280; margin-top: 6px; }
+      .ok { color: #059669; }
+      .err { color: #dc2626; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>42 Calendar Sync – Setup</h1>
+      <p>Connect your 42 Intra and Google Calendar accounts. Tokens are stored locally in your browser.</p>
+
+      <h2>1) 42 Intra OAuth App</h2>
+      <div class="row">
+        <div>
+          <label>42 Client ID (UID)</label>
+          <input id="f42id" placeholder="e.g. abcd123..." />
+        </div>
+        <div>
+          <label>42 Client Secret</label>
+          <input id="f42secret" placeholder="e.g. shhh..." />
+        </div>
+      </div>
+      <div class="actions">
+        <button id="save42">Save</button>
+        <button id="connect42" class="primary">Connect 42</button>
+      </div>
+      <div id="msg42" class="note"></div>
+
+      <h2>2) Google OAuth App</h2>
+      <div class="row">
+        <div>
+          <label>Google Client ID</label>
+          <input id="gcid" placeholder="e.g. 123.apps.googleusercontent.com" />
+        </div>
+        <div>
+          <label>Google Client Secret</label>
+          <input id="gcsecret" placeholder="e.g. GOCSPX-..." />
+        </div>
+      </div>
+      <div class="actions">
+        <button id="saveG">Save</button>
+        <button id="connectG" class="primary">Connect Google</button>
+      </div>
+      <div id="msgG" class="note"></div>
+
+      <p class="note">Tip: Set the redirect URI in both providers to the extension redirect shown after clicking Connect. We use a dynamic redirect URL provided by Chrome.</p>
+      <h2>Diagnostics</h2>
+      <div class="actions">
+        <button id="scanNow">Scan for new future registrations now</button>
+      </div>
+      <div id="msgScan" class="note"></div>
+
+      <h2>Experimental detection (popups)</h2>
+      <label style="display:flex;align-items:center;gap:8px;">
+        <input id="enableHook" type="checkbox" /> Enable robust popup detection (may break some pages)
+      </label>
+      <h2>Redirect URIs</h2>
+      <p class="note">Configure these exact redirect URIs in your OAuth apps:</p>
+      <div>
+        <label>42 Redirect URI</label>
+        <pre id="redir42" style="white-space: pre-wrap; user-select: all; background:#f3f4f6; padding:8px; border-radius:6px;"></pre>
+      </div>
+      <div style="margin-top:8px;">
+        <label>Google Redirect URI</label>
+        <pre id="redirG" style="white-space: pre-wrap; user-select: all; background:#f3f4f6; padding:8px; border-radius:6px;"></pre>
+      </div>
+    </div>
+
+    <script src="options.js"></script>
+    <script>
+      // simple smoke test to ensure background is reachable
+      chrome.runtime.sendMessage({ type: 'debug_ping' }, (res) => {
+        // no-op; if blocked, user can see console error
+        console.debug('Background ping:', res);
+      });
+    </script>
+  </body>
+</html>
