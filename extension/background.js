@@ -14,6 +14,20 @@ const STORAGE_KEYS = {
   knownEventIds: 'known_event_ids',
   pendingSync: 'pending_sync_event'
 };
+// Detect popup/child windows navigating to event pages (e.g., modal windows or separate popups)
+chrome.webNavigation.onCommitted.addListener(async (details) => {
+  try {
+    if (details.frameId !== 0) return; // only top-level of that tab
+    const url = new URL(details.url);
+    if (!/\.intra\.42\.fr$/.test(url.hostname) && !/intra\.42\.fr$/.test(url.hostname)) return;
+    const m = url.pathname.match(/\/events\/(\d+)/);
+    if (m) {
+      const eventId = m[1];
+      // prepare prompt immediately when we see user land on an event popup
+      await setStored({ [STORAGE_KEYS.pendingSync]: { id: Number(eventId) } });
+    }
+  } catch {}
+});
 
 const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/calendar',

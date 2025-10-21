@@ -112,10 +112,14 @@
     document.body.appendChild(overlay);
 
     yes.addEventListener('click', () => {
-      chrome.runtime.sendMessage({ type: 'sync_event', eventId }, (res) => {
-        // Ignore result in content page, just close
+      try {
+        chrome.runtime.sendMessage({ type: 'sync_event', eventId }, (res) => {
+          document.body.removeChild(overlay);
+        });
+      } catch (e) {
+        try { console.error('Send sync_event failed', e); } catch {}
         document.body.removeChild(overlay);
-      });
+      }
     });
     no.addEventListener('click', () => {
       document.body.removeChild(overlay);
