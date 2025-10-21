@@ -86,7 +86,10 @@
   }
 
   function createOverlayPrompt(eventId) {
+    // De-dupe in page: if overlay exists, do not create another
+    if (document.getElementById('ics-overlay')) return;
     const overlay = document.createElement('div');
+    overlay.id = 'ics-overlay';
     overlay.style.position = 'fixed';
     overlay.style.inset = '0';
     overlay.style.background = 'rgba(0,0,0,0.45)';
@@ -152,7 +155,8 @@
       }
     });
     no.addEventListener('click', () => {
-      document.body.removeChild(overlay);
+      const el = document.getElementById('ics-overlay');
+      if (el && el.parentNode) el.parentNode.removeChild(el);
     });
   }
 

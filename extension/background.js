@@ -283,6 +283,14 @@ async function handleNewRegistration(eventId) {
   try {
     const event42 = await fortyTwoFetch(`/events/${eventId}`);
     // Open prompt page to ask user confirmation
+    // Prevent duplicate prompts for the same event within 60s
+    const dedupeKey = `dedupe_${event42.id}`;
+    const stash = await getStored([dedupeKey]);
+    const now = Date.now();
+    if (stash[dedupeKey] && now - stash[dedupeKey] < 60000) {
+      return;
+    }
+    await setStored({ [dedupeKey]: now });
     await setStored({ [STORAGE_KEYS.pendingSync]: { id: event42.id, name: event42.name, begin_at: event42.begin_at } });
     const url = chrome.runtime.getURL('prompt.html');
     await chrome.tabs.create({ url });
