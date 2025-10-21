@@ -46,4 +46,50 @@
 
     return ws;
   };
+
+  // Hook fetch to detect registration POSTs
+  const origFetch = window.fetch;
+  if (origFetch) {
+    window.fetch = async function(input, init) {
+      const method = (init && init.method ? init.method : 'GET').toUpperCase();
+      let url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
+      const is42 = /\.intra\.(42|fr)\.|intra\.42\./.test(url) || /projects\.intra\.42\.fr/.test(url);
+      const looksLikeRegister = /\/(events|events_users)\//.test(url) || /(register|subscribe|enroll|inscrire)/i.test(url);
+      const res = await origFetch.apply(this, arguments);
+      try {
+        if (is42 && looksLikeRegister && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+          const m = url.match(/\/events\/(\d+)/);
+          const eventId = m ? Number(m[1]) : null;
+          window.postMessage({ __ics: true, kind: 'ics_reg_success', eventId, url, status: res.status }, '*');
+        }
+      } catch {}
+      return res;
+    };
+  }
+
+  // Hook XHR as well
+  const OrigXHR = window.XMLHttpRequest;
+  if (OrigXHR) {
+    const open = OrigXHR.prototype.open;
+    const send = OrigXHR.prototype.send;
+    OrigXHR.prototype.open = function(method, url) {
+      try { this.__ics = { method: String(method).toUpperCase(), url: String(url) }; } catch {}
+      return open.apply(this, arguments);
+    };
+    OrigXHR.prototype.send = function(body) {
+      this.addEventListener('load', function() {
+        try {
+          const info = this.__ics || {};
+          const is42 = info.url && (/\.intra\.(42|fr)\.|intra\.42\./.test(info.url) || /projects\.intra\.42\.fr/.test(info.url));
+          const looksLikeRegister = info.url && (/\/(events|events_users)\//.test(info.url) || /(register|subscribe|enroll|inscrire)/i.test(info.url));
+          if (is42 && looksLikeRegister && (info.method === 'POST' || info.method === 'PUT' || info.method === 'PATCH')) {
+            const m = info.url.match(/\/events\/(\d+)/);
+            const eventId = m ? Number(m[1]) : null;
+            window.postMessage({ __ics: true, kind: 'ics_reg_success', eventId, url: info.url, status: this.status }, '*');
+          }
+        } catch {}
+      });
+      return send.apply(this, arguments);
+    };
+  }
 })();

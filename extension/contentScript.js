@@ -21,6 +21,14 @@
       if (ev.data.kind === 'confirm_subscription') {
         try { console.debug('[42 Calendar Sync] Subscription confirmed', ev.data); } catch {}
       }
+      if (ev.data.kind === 'ics_reg_success') {
+        const id = ev.data.eventId;
+        if (id && chrome?.runtime?.id) {
+          chrome.runtime.sendMessage({ type: 'content_register_click', eventId: id });
+          // Show inline prompt as well
+          createOverlayPrompt(id);
+        }
+      }
     });
   } catch {}
   const TRY_TEXTS = [
