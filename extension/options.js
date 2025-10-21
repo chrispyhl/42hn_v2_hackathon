@@ -76,6 +76,7 @@ addEventListener('DOMContentLoaded', () => {
 
   const scanBtn = document.getElementById('scanNow');
   const msgScan = document.getElementById('msgScan');
+  const enableHook = document.getElementById('enableHook');
   if (scanBtn) {
     scanBtn.addEventListener('click', () => {
       msgScan.textContent = 'Scanning…';
@@ -89,6 +90,15 @@ addEventListener('DOMContentLoaded', () => {
           msgScan.className = 'note err';
         }
       });
+    });
+  }
+
+  if (enableHook) {
+    chrome.storage.local.get('ics_enable_hook', (v) => {
+      enableHook.checked = !!v.ics_enable_hook;
+    });
+    enableHook.addEventListener('change', () => {
+      chrome.storage.local.set({ ics_enable_hook: enableHook.checked });
     });
   }
 });
