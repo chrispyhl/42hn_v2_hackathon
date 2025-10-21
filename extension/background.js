@@ -279,6 +279,17 @@ async function detectNewRegistrationViaDiff(waitMs = 7000) {
   }
   return { found: false };
 }
+async function openPromptWindow() {
+  const url = chrome.runtime.getURL('prompt.html');
+  try {
+    // Open small popup window instead of a tab to avoid full tab switches
+    await chrome.windows.create({ url, type: 'popup', width: 460, height: 380 });
+  } catch {
+    // Fallback to tab if popup window fails
+    await chrome.tabs.create({ url });
+  }
+}
+
 async function handleNewRegistration(eventId) {
   try {
     const event42 = await fortyTwoFetch(`/events/${eventId}`);
@@ -292,8 +303,7 @@ async function handleNewRegistration(eventId) {
     }
     await setStored({ [dedupeKey]: now });
     await setStored({ [STORAGE_KEYS.pendingSync]: { id: event42.id, name: event42.name, begin_at: event42.begin_at } });
-    const url = chrome.runtime.getURL('prompt.html');
-    await chrome.tabs.create({ url });
+    await openPromptWindow();
   } catch (e) {
     console.warn('Failed to fetch event for prompt:', e.message);
   }
