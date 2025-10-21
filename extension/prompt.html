@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Confirm Sync</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial, 'Noto Sans'; margin: 0; background: #f9fafb; }
+      .wrap { max-width: 720px; margin: 40px auto; padding: 20px; }
+      .card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; }
+      h1 { font-size: 20px; margin: 0 0 10px; }
+      .note { color: #6b7280; margin-bottom: 16px; }
+      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .actions { margin-top: 16px; display: flex; gap: 12px; }
+      button { padding: 8px 12px; border-radius: 6px; border: 1px solid #d1d5db; cursor: pointer; }
+      button.primary { background: #1a73e8; color: white; border-color: #1a73e8; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <h1>Sync this event to Google Calendar?</h1>
+        <div id="info" class="note">Loading event details…</div>
+        <div class="actions">
+          <button id="add" class="primary">Add to Calendar</button>
+          <button id="cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+    <script src="prompt.js"></script>
+  </body>
+</html>
