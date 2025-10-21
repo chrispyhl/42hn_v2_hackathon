@@ -259,6 +259,26 @@ async function insertGoogleEvent(googleEvent) {
 }
 
 // ---------- Registration detection & prompting ----------
+async function getFutureEventsList() {
+  const events = await fortyTwoFetch('/me/events');
+  const now = new Date();
+  return events.filter(e => new Date(e.begin_at) > now);
+}
+
+async function detectNewRegistrationViaDiff(waitMs = 7000) {
+  const before = await getFutureEventsList();
+  const beforeIds = new Set(before.map(e => e.id));
+  await new Promise(r => setTimeout(r, waitMs));
+  const after = await getFutureEventsList();
+  const added = after.find(e => !beforeIds.has(e.id));
+  if (added) {
+    await setStored({ [STORAGE_KEYS.pendingSync]: { id: added.id, name: added.name, begin_at: added.begin_at } });
+    const url = chrome.runtime.getURL('prompt.html');
+    await chrome.tabs.create({ url });
+    return { found: true, eventId: added.id };
+  }
+  return { found: false };
+}
 async function handleNewRegistration(eventId) {
   try {
     const event42 = await fortyTwoFetch(`/events/${eventId}`);
