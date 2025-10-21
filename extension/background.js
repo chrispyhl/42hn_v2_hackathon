@@ -386,6 +386,24 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       sendResponse({ ok: true, created: true });
       return;
     }
+    if (msg?.type === 'delete_event' && msg.eventId) {
+      // Find the corresponding Google event by source URL and delete it
+      const query = encodeURIComponent(`https://projects.intra.42.fr/events/${msg.eventId}`);
+      try {
+        const data = await googleApi(`/calendars/primary/events?q=${query}&maxResults=5&showDeleted=false`);
+        if (Array.isArray(data.items)) {
+          for (const it of data.items) {
+            try {
+              await googleApi(`/calendars/primary/events/${encodeURIComponent(it.id)}`, 'DELETE');
+            } catch {}
+          }
+        }
+        sendResponse({ ok: true, deleted: true });
+      } catch (e) {
+        sendResponse({ ok: false, error: e?.message || String(e) });
+      }
+      return;
+    }
     if (msg?.type === 'ics_ws') {
       // Page-level WebSocket instrument messages can be forwarded here in future if needed
       sendResponse({ ok: true });

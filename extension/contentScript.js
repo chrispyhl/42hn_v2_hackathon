@@ -26,8 +26,13 @@
         if (ev.data.kind === 'ics_reg_success') {
           const id = ev.data.eventId;
           if (id && chrome?.runtime?.id) {
-            chrome.runtime.sendMessage({ type: 'content_register_click', eventId: id });
             createOverlayPrompt(id);
+          }
+        }
+        if (ev.data.kind === 'ics_unsub_success') {
+          const id = ev.data.eventId;
+          if (id && chrome?.runtime?.id) {
+            createRemoveOverlay(id);
           }
         }
       });
@@ -160,6 +165,81 @@
     });
   }
 
+  function createRemoveOverlay(eventId) {
+    if (document.getElementById('ics-overlay-remove')) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'ics-overlay-remove';
+    overlay.style.position = 'fixed';
+    overlay.style.inset = '0';
+    overlay.style.background = 'rgba(0,0,0,0.45)';
+    overlay.style.zIndex = '999999';
+
+    const box = document.createElement('div');
+    box.style.position = 'absolute';
+    box.style.left = '50%';
+    box.style.top = '30%';
+    box.style.transform = 'translate(-50%, -30%)';
+    box.style.background = '#fff';
+    box.style.color = '#111';
+    box.style.padding = '20px';
+    box.style.borderRadius = '8px';
+    box.style.width = 'min(420px, 90vw)';
+    box.style.boxShadow = '0 10px 30px rgba(0,0,0,0.2)';
+
+    const title = document.createElement('div');
+    title.textContent = 'Remove from Google Calendar?';
+    title.style.fontSize = '18px';
+    title.style.fontWeight = '600';
+
+    const subtitle = document.createElement('div');
+    subtitle.textContent = 'You unsubscribed from this 42 event. Remove it from your calendar too?';
+    subtitle.style.margin = '10px 0 14px 0';
+
+    const actions = document.createElement('div');
+    actions.style.display = 'flex';
+    actions.style.gap = '12px';
+    actions.style.justifyContent = 'flex-end';
+
+    const yes = document.createElement('button');
+    yes.textContent = 'Remove from Calendar';
+    yes.style.background = '#d93025';
+    yes.style.color = '#fff';
+    yes.style.border = 'none';
+    yes.style.padding = '8px 12px';
+    yes.style.borderRadius = '6px';
+    yes.style.cursor = 'pointer';
+
+    const no = document.createElement('button');
+    no.textContent = 'Keep';
+    no.style.background = '#eee';
+    no.style.color = '#333';
+    no.style.border = 'none';
+    no.style.padding = '8px 12px';
+    no.style.borderRadius = '6px';
+    no.style.cursor = 'pointer';
+
+    actions.append(yes, no);
+    box.append(title, subtitle, actions);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    yes.addEventListener('click', () => {
+      try {
+        chrome.runtime.sendMessage({ type: 'delete_event', eventId }, () => {
+          const el = document.getElementById('ics-overlay-remove');
+          if (el && el.parentNode) el.parentNode.removeChild(el);
+        });
+      } catch (e) {
+        const el = document.getElementById('ics-overlay-remove');
+        if (el && el.parentNode) el.parentNode.removeChild(el);
+      }
+    });
+    no.addEventListener('click', () => {
+      const el = document.getElementById('ics-overlay-remove');
+      if (el && el.parentNode) el.parentNode.removeChild(el);
+    });
+  }
+
   function attach() {
     const candidates = findRegisterCandidates();
     if (candidates.length === 0) return;
@@ -169,7 +249,6 @@
         const fromEl = extractEventIdFromElement(evt.target);
         const eventId = fromEl || fromUrl;
         if (eventId && chrome?.runtime?.id) {
-          chrome.runtime.sendMessage({ type: 'content_register_click', eventId });
           createOverlayPrompt(eventId);
         }
       }, { capture: true });
