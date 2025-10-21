@@ -40,4 +40,16 @@
     }
   ],
   "minimum_chrome_version": "114"
+  ,
+  "web_accessible_resources": [
+    {
+      "resources": ["injected.js"],
+      "matches": [
+        "https://projects.intra.42.fr/*",
+        "https://intra.42.fr/*",
+        "https://profile.intra.42.fr/*",
+        "https://*.intra.42.fr/*"
+      ]
+    }
+  ]
 }

@@ -358,6 +358,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       sendResponse({ ok: true, created: true });
       return;
     }
+    if (msg?.type === 'ics_ws') {
+      // Page-level WebSocket instrument messages can be forwarded here in future if needed
+      sendResponse({ ok: true });
+      return;
+    }
   })().catch((e) => {
     sendResponse({ ok: false, error: e?.message || String(e) });
   });

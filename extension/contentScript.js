@@ -3,6 +3,26 @@
 (function() {
   // Early smoke log
   try { console.debug('[42 Calendar Sync] content script loaded on', location.href); } catch {}
+
+  // Inject page-level WS hook to capture ActionCable subscribe/confirm
+  try {
+    const src = chrome.runtime.getURL('injected.js');
+    const s = document.createElement('script');
+    s.src = src;
+    s.async = false;
+    (document.head || document.documentElement).appendChild(s);
+    s.parentNode && s.parentNode.removeChild(s);
+    window.addEventListener('message', (ev) => {
+      if (!ev?.data || ev.source !== window) return;
+      if (!ev.data.__ics) return;
+      if (ev.data.kind === 'reject_subscription') {
+        try { console.warn('[42 Calendar Sync] Subscription rejected', ev.data); } catch {}
+      }
+      if (ev.data.kind === 'confirm_subscription') {
+        try { console.debug('[42 Calendar Sync] Subscription confirmed', ev.data); } catch {}
+      }
+    });
+  } catch {}
   const TRY_TEXTS = [
     'register', 'subscribe', 'join', 'participate', 'sign up', 'apply',
     'anmelden', 'teilnehmen', "s'inscrire", 'inscrire'
